@@ -1,0 +1,46 @@
+export const meta = {
+  title: "Kredim Member Panel",
+  slug: "kredim-member-panel",
+  summary:
+    "A consumer BNPL platform serving 100,000+ users across three multi-tenant modules, covering credit tracking, cards, and payment flows.",
+  techStack: ["react 18", "redux-saga", "rtk query"],
+  role: "Senior Frontend Developer",
+  timeline: "2021 - 2026",
+};
+
+> Placeholder body. The facts below come from the CV and reference notes; the
+> full narrative, decisions, and measured outcomes land in feature 7.
+
+## Problem
+
+Three products - Kredim, Hopi, and Partner - needed the same BNPL member
+experience with different branding, tenancy rules, and authentication contexts.
+Shipping them as three applications would have meant maintaining the same
+credit-tracking and payment logic three times.
+
+## Architecture
+
+One multi-tenant codebase with a feature-sliced structure, and a hybrid state
+strategy: Redux Toolkit slices for synchronous UI state, and 15+ domain-specific
+Redux-Saga flows for the async sequences that actually needed orchestration -
+auth, loans, cards, KYC, payments, WebSocket. RTK Query sits alongside for the
+API-heavy read surfaces.
+
+Payment flows cover 3D Secure, saved and new card, EFT/wire transfer, and the
+Kredim Wallet.
+
+## Decisions
+
+- **Saga `takeLatest` for OTP and login** - each user action cancels in-flight
+  duplicates, which removed the ghost-login states the earlier implementation
+  produced
+- **Global reset on logout in the root reducer** - one dispatch returns all 20
+  domain slices to their initial state, instead of per-slice reset logic
+- **Dual-token Axios interceptor** - standard and partner authentication
+  contexts in a single HTTP client
+- **Amount bands, not amounts, in analytics** - GDPR/KVKK compliance enforced
+  at the architecture level rather than by review
+
+## Outcome
+
+To be written in feature 7, with the real figures.

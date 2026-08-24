@@ -1,0 +1,41 @@
+export const meta = {
+  title: "Kredim Checkout",
+  slug: "kredim-checkout",
+  summary:
+    "An embeddable credit-payment flow that lets people pay with Kredim credit without leaving a partner's e-commerce or banking app.",
+  techStack: ["react 18", "redux-saga", "embedded flow"],
+  role: "Senior Frontend Developer",
+  timeline: "2023 - 2026",
+};
+
+> Placeholder body. The facts below come from the CV and reference notes; the
+> full narrative, decisions, and measured outcomes land in feature 7.
+
+## Problem
+
+Paying with Kredim credit meant leaving whatever app you were already in. A
+customer partway through checkout on a partner's e-commerce site, or inside a
+banking app, had to break context to complete a payment, and every context
+break is somewhere a transaction can be abandoned.
+
+## Architecture
+
+An embeddable checkout flow that runs inside third-party e-commerce and banking
+partner applications, rather than a destination the customer is sent to. The
+flow carries campaign and installment selection with it, so the choices that
+used to require a separate step happen in place.
+
+It runs on the same platform as the Member Panel - React 18 with Redux Toolkit
+slices and Redux-Saga for the async sequences - so the payment and credit logic
+already proven there did not have to be rebuilt for an embedded context.
+
+## Decisions
+
+Interrupted transactions get an SMS-triggered deep link back into the flow,
+rather than being dropped. An embedded surface has more ways to be interrupted
+than a page you own end to end - the host app backgrounds, a call comes in -
+so recovery had to be a designed path, not an error state.
+
+## Outcome
+
+To be written in feature 7, with the real figures.

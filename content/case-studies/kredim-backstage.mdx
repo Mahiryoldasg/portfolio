@@ -1,0 +1,57 @@
+export const meta = {
+  title: "Kredim Backstage",
+  slug: "kredim-backstage",
+  summary:
+    "An internal admin platform of 29 feature modules covering campaign, KYC, allocation, and permission management.",
+  techStack: ["react 19", "tanstack query", "monorepo"],
+  role: "Senior Frontend Developer",
+  timeline: "2025 - 2026",
+};
+
+> Placeholder body. The facts below come from the CV and reference notes; the
+> full narrative, decisions, and measured outcomes land in feature 7.
+
+## Problem
+
+The internal platform had to serve 29 distinct business domains - campaign,
+role, allocation, KYC settings, approval, and the rest - each owned by different
+people and moving at different speeds. Built as one undifferentiated admin app,
+every team's change would sit in every other team's way.
+
+## Architecture
+
+A feature-sliced monorepo on Bulletproof React principles: `apps/backstage`
+alongside `packages/auth` and `packages/blocks`, with pnpm workspaces holding
+it together. Each of the 29 features is a vertical slice owning its own API
+layer, queries and mutations, i18n bundle, and pages, with cross-feature imports
+disallowed.
+
+```ts
+// query keys and their fetchers live in one factory, per feature
+export const campaignKeys = createQueryKeys("campaign", {
+  list: (filters: CampaignFilters) => ({
+    queryKey: [filters],
+    queryFn: () => api.listCampaigns(filters),
+  }),
+});
+```
+
+Server state runs through TanStack Query v5 with `query-key-factory`, so cache
+invalidation after a mutation is declarative rather than remembered.
+
+## Decisions
+
+- **Permissions at the route, not in the view** - a `RouteGuard` backed by
+  central `PERMISSION` and `ROUTE_PERMISSIONS` maps makes all 40+ protected
+  routes auditable from one file
+- **A `MutationForm` compound component** - `Root`, `Form`, `FieldContainer`,
+  `Actions`, `SubmitButton`, sharing `isPending` through context instead of
+  prop drilling, applied across 20+ form pages
+- **No barrel files** - they defeated Vite's tree-shaking and slowed HMR, so
+  imports point at real modules
+- **Route-level code splitting** - `React.lazy` with a `loadRoute` wrapper,
+  loading each feature's i18n bundle with it
+
+## Outcome
+
+To be written in feature 7, with the real figures.

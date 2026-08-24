@@ -1,52 +1,19 @@
 import type { CaseStudy } from "@/types/case-study";
+import { meta as kredimCheckout } from "@/content/case-studies/kredim-checkout.mdx";
+import { meta as kredimMemberPanel } from "@/content/case-studies/kredim-member-panel.mdx";
+import { meta as kredimMerchant } from "@/content/case-studies/kredim-merchant.mdx";
+import { meta as kredimBackstage } from "@/content/case-studies/kredim-backstage.mdx";
 
+// Listing order is editorial, not chronological. The detail route reads its
+// body straight from `content/case-studies/<slug>.mdx`, so this is metadata
+// only.
 export const caseStudies: CaseStudy[] = [
-  {
-    title: "Kredim Checkout",
-    slug: "kredim-checkout",
-    summary:
-      "Rebuilding the merchant checkout flow to cut drop-off and support three new payment methods without a rewrite.",
-    techStack: ["next.js", "a/b test", "payments"],
-    role: "Lead Frontend Engineer",
-    problem: "",
-    solution: "",
-    outcome: "",
-    images: [],
-  },
-  {
-    title: "Kredim Member Panel",
-    slug: "kredim-member-panel",
-    summary:
-      "Consolidating three legacy dashboards into one panel used daily by 200k+ members.",
-    techStack: ["react", "migration"],
-    role: "Frontend Engineer",
-    problem: "",
-    solution: "",
-    outcome: "",
-    images: [],
-  },
-  {
-    title: "Kredim Merchant",
-    slug: "kredim-merchant",
-    summary:
-      "Self-serve merchant onboarding and reporting, replacing a manual, ops-run process.",
-    techStack: ["react", "tanstack query"],
-    role: "Frontend Engineer",
-    problem: "",
-    solution: "",
-    outcome: "",
-    images: [],
-  },
-  {
-    title: "Kredim Backstage",
-    slug: "kredim-backstage",
-    summary:
-      "Internal admin platform giving risk and support teams real-time visibility into transactions.",
-    techStack: ["react", "redux", "internal tools"],
-    role: "Frontend Engineer",
-    problem: "",
-    solution: "",
-    outcome: "",
-    images: [],
-  },
+  kredimCheckout,
+  kredimMemberPanel,
+  kredimMerchant,
+  kredimBackstage,
 ];
+
+export function getCaseStudy(slug: string): CaseStudy | undefined {
+  return caseStudies.find((caseStudy) => caseStudy.slug === slug);
+}
