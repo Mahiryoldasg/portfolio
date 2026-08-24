@@ -1,26 +1,68 @@
 @import "tailwindcss";
 
+/* Theme tokens, ported from prototypes/theme.css. Editorial minimal, warm
+   amber accent, neutral grayscale everywhere else. Variable names match the
+   prototype 1:1 so a future visual tweak only needs to change one place. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #ffffff;
+  --surface: #fafafa;
+  --border: #e5e5e5;
+
+  --text: #171717;
+  --muted: #6b6b6b;
+  --faint: #a3a3a3;
+
+  --accent: #b45309;
+  --accent-ink: #ffffff;
+  --accent-subtle: #fef3c7;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--bg);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-foreground: var(--text);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-subtle: var(--accent-subtle);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  :root:not([data-theme="light"]) {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --border: #262626;
+
+    --text: #ededed;
+    --muted: #a3a3a3;
+    --faint: #6b6b6b;
+
+    --accent: #f59e0b;
+    --accent-ink: #0a0a0a;
+    --accent-subtle: #451a03;
   }
 }
 
+:root[data-theme="dark"] {
+  --bg: #0a0a0a;
+  --surface: #111111;
+  --border: #262626;
+
+  --text: #ededed;
+  --muted: #a3a3a3;
+  --faint: #6b6b6b;
+
+  --accent: #f59e0b;
+  --accent-ink: #0a0a0a;
+  --accent-subtle: #451a03;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
 }
