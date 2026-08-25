@@ -20,7 +20,7 @@ export async function generateMetadata({
   if (!caseStudy) return {};
 
   return {
-    title: `${caseStudy.title} - Mahir Yoldaş`,
+    title: `${caseStudy.title} - Mahir Yoldaş Gazeloğlu`,
     description: caseStudy.summary,
   };
 }

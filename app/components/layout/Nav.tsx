@@ -12,7 +12,7 @@ export default function Nav() {
   return (
     <nav className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border py-4">
       <Link href="/" className="whitespace-nowrap font-semibold tracking-tight">
-        Mahir Yoldaş
+        Mahir Yoldaş Gazeloğlu
       </Link>
       <ul className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm sm:gap-x-6">
         {links.map((link) => (

@@ -23,7 +23,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Mahir Yoldaş - Senior Frontend Engineer",
+  title: "Mahir Yoldaş Gazeloğlu - Senior Frontend Engineer",
   description:
     "Portfolio and case studies from five years building production frontends in fintech.",
 };
