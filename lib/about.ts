@@ -91,6 +91,10 @@ export const skillGroups: SkillGroup[] = [
     skills: ["Figma", "Jira", "Confluence"],
   },
   {
+    name: "AI-Assisted Workflow",
+    skills: ["Claude", "Google Antigravity", "Cursor"],
+  },
+  {
     name: "Spoken Languages",
     skills: ["Turkish (native)", "English (professional working proficiency)"],
   },
