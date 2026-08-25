@@ -1,4 +1,5 @@
 import Link from "next/link";
+import CvDownloadLink from "./components/cv/CvDownloadLink";
 
 export default function Home() {
   return (
@@ -24,12 +25,7 @@ export default function Home() {
         >
           View case studies
         </Link>
-        <Link
-          href="/cv.pdf"
-          className="rounded border border-border px-5 py-3 text-sm font-medium"
-        >
-          Download CV
-        </Link>
+        <CvDownloadLink />
       </div>
 
       <section id="contact" className="mt-20 border-t border-border pt-10">

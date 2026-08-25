@@ -2,6 +2,7 @@ import { bio, education, experience, skillGroups } from "@/lib/about";
 import SkillGroupCard from "../components/about/SkillGroupCard";
 import ExperienceTimeline from "../components/about/ExperienceTimeline";
 import Education from "../components/about/Education";
+import CvDownloadLink from "../components/cv/CvDownloadLink";
 
 export default function AboutPage() {
   return (
@@ -23,14 +24,8 @@ export default function AboutPage() {
         ))}
       </div>
 
-      {/* Plain anchor, not next/link: /cv.pdf is a static file, not a route. */}
       <div className="mt-8">
-        <a
-          href="/cv.pdf"
-          className="inline-block rounded border border-border px-5 py-3 text-sm font-medium"
-        >
-          Download CV
-        </a>
+        <CvDownloadLink className="inline-block" />
       </div>
 
       <section className="mt-16 border-t border-border pt-10">
