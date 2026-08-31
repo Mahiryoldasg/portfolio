@@ -1,5 +1,6 @@
 import Link from "next/link";
 import CvDownloadLink from "./components/cv/CvDownloadLink";
+import ContactForm from "./components/contact/ContactForm";
 
 export default function Home() {
   return (
@@ -29,20 +30,23 @@ export default function Home() {
       </div>
 
       <section id="contact" className="mt-20 border-t border-border pt-10">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-medium">Let&apos;s talk</h2>
-            <p className="mt-1 text-muted">
-              Open to senior frontend roles - reach out directly.
-            </p>
-          </div>
+        <h2 className="text-lg font-medium">Let&apos;s talk</h2>
+        <p className="mt-1 text-muted">
+          Open to senior frontend roles - send a message and I&apos;ll get back
+          to you.
+        </p>
+
+        <ContactForm />
+
+        <p className="mt-6 text-sm text-muted">
+          Prefer your own mail client?{" "}
           <a
             href="mailto:mahiryoldas95@gmail.com"
-            className="rounded border border-border px-5 py-3 text-sm font-medium"
+            className="underline underline-offset-4 hover:text-foreground"
           >
             mahiryoldas95@gmail.com
           </a>
-        </div>
+        </p>
       </section>
     </div>
   );
