@@ -2,34 +2,85 @@ export const meta = {
   title: "Kredim Merchant",
   slug: "kredim-merchant",
   summary:
-    "A partner-facing panel that lets merchant businesses extend Kredim credit directly to their own customers.",
-  techStack: ["react 18", "redux-saga", "partner panel"],
+    "A point-of-sale panel that lets a merchant's store staff extend Kredim credit to a customer at the counter.",
+  techStack: ["react 18", "redux-saga", "point of sale"],
   role: "Senior Frontend Developer",
   timeline: "2022 - 2026",
 };
 
-> Placeholder body. The facts below come from the CV and reference notes; the
-> full narrative, decisions, and measured outcomes land in feature 7.
+import MerchantTenant from "@/app/components/case-studies/diagrams/MerchantTenant";
 
 ## Problem
 
-Merchants wanted to offer Kredim credit to their own customers, but had no
-surface of their own to do it from. Anything a merchant needed went through
-Kredim's internal teams, which put a person in the loop of a process that should
-have belonged to the merchant.
+A merchant who wanted to offer Kredim credit to their own customers had no
+surface of their own to do it from. The credit product existed and the customer
+was standing at the counter, but the person serving them had no way to complete
+the sale directly.
+
+The constraint that shapes everything else is who the user is. This is store
+staff, mid-sale, with a customer waiting in front of them. That is not an
+audience for a dense administrative interface. Whatever the panel does, it has
+to be quick, hard to get wrong, and tolerant of a shop's connectivity.
 
 ## Architecture
 
-A partner-facing panel on the same platform as the Member Panel - React 18,
-Redux Toolkit slices, Redux-Saga for async flows - rather than a new stack for
-a new audience. The credit, campaign, and authentication logic already lived
-there; what Merchant added was a different tenant with different permissions
-sitting on top of it.
+Kredim Merchant is a partner-facing panel on the same platform as the Member
+Panel: React 18, Redux Toolkit slices, and Redux-Saga for the async sequences.
+The credit, campaign, and authentication logic already lived there. What Merchant
+adds is a different tenant with a different shape of permission on top of it.
+
+<MerchantTenant />
+
+Visibility is scoped by branch, not only by merchant. A merchant organisation
+contains branches, and branches contain the staff who actually use the panel. A
+head office can see across its branches; a single store sees its own trade. That
+is one level deeper than the Member Panel's model, where the tenant boundary was
+the whole story.
+
+The product surface is deliberately narrow. The panel's job is the transaction
+at the counter: extending credit to a customer for a purchase, and reversing it
+when a sale is cancelled or refunded. Reporting and settlement live elsewhere.
 
 ## Decisions
 
-To be written in feature 7.
+**Scope by branch at the data, not at the screen.** A branch scope is a
+visibility rule about data, so it belongs where data is fetched rather than
+where it is rendered. Enforcing it by hiding rows in the interface would mean
+every new screen is a fresh opportunity to leak another branch's trade, and the
+one that forgets is the one nobody notices. Deciding it at the boundary makes
+the safe case the default and the unsafe one something you would have to work at.
+
+**Money has to add up, and the interface is the weak point.** Every transaction
+the panel creates has a financial consequence that must reconcile later, even
+though the reconciliation itself happens elsewhere. A sale, a cancellation, a
+refund, and a transaction that failed halfway all have to leave the system in a
+state that adds up.
+
+That puts the correctness burden somewhere awkward. The interface is a simple
+one, used at speed, by people whose job is serving a customer rather than
+keeping books, and the records it produces have to be exactly right. The design
+answer is to make the ambiguous states unreachable instead of recoverable: a
+transaction is completed or it is not, a reversal refers to the specific sale it
+reverses, and there is no half-finished state a cashier can walk away from for
+somebody to interpret later.
+
+**Reuse the platform, not the interface.** Merchant shares the Member Panel's
+state architecture and its credit logic, but none of its screens. A member
+managing their own credit and a cashier completing a sale want opposite things:
+one is browsing, the other is executing a single task as fast as it can be done.
+Sharing the platform kept the money logic in one place. Sharing the interface
+would have produced a panel that was a worse version of both.
 
 ## Outcome
 
-To be written in feature 7, with the real figures.
+- **The sale completes at the counter.** A merchant can extend Kredim credit
+  directly to their own customer, with no one from Kredim in the loop of a
+  transaction that belongs to the merchant.
+- **Visibility follows the organisation chart.** Branch scoping means a store
+  sees its own trade and a head office sees across its branches, without either
+  view being assembled by hand.
+- **Credit logic exists once.** Merchant and the Member Panel share it, so a
+  change to how credit behaves lands in both without being written twice.
+- **The narrow surface is the point.** The panel does one thing at counter
+  speed rather than being an administrative console that store staff have to
+  learn.

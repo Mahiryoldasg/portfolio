@@ -8,39 +8,148 @@ export const meta = {
   timeline: "2021 - 2026",
 };
 
-> Placeholder body. The facts below come from the CV and reference notes; the
-> full narrative, decisions, and measured outcomes land in feature 7.
+import MemberPanelTenancy from "@/app/components/case-studies/diagrams/MemberPanelTenancy";
 
 ## Problem
 
-Three products - Kredim, Hopi, and Partner - needed the same BNPL member
-experience with different branding, tenancy rules, and authentication contexts.
-Shipping them as three applications would have meant maintaining the same
-credit-tracking and payment logic three times.
+Three products needed the same thing. Kredim, Hopi, and Partner each had to give
+members a BNPL experience: credit limit and score tracking, cards, installment
+plans, and payment. Each also needed its own branding, its own tenancy rules,
+and its own authentication context.
+
+Shipping them as three applications was the obvious route and the wrong one. The
+credit-tracking and payment logic is the hard part, it is identical across all
+three, and maintaining it three times means fixing every bug three times and
+getting it wrong at least once. In a product that moves money for 100,000+
+people, "at least once" is the part that matters.
 
 ## Architecture
 
-One multi-tenant codebase with a feature-sliced structure, and a hybrid state
-strategy: Redux Toolkit slices for synchronous UI state, and 15+ domain-specific
-Redux-Saga flows for the async sequences that actually needed orchestration -
-auth, loans, cards, KYC, payments, WebSocket. RTK Query sits alongside for the
-API-heavy read surfaces.
+One multi-tenant codebase on React 18 and TypeScript, feature-sliced into
+`/features`, `/services`, `/hooks`, `/components`, and `/routes`. Tenancy is a
+runtime concern inside one application rather than a build-time fork.
 
-Payment flows cover 3D Secure, saved and new card, EFT/wire transfer, and the
+<MemberPanelTenancy />
+
+The central decision is how state is split, and it is split by the job each tool
+does rather than by the feature it serves.
+
+Redux Toolkit slices hold synchronous UI state: 20 domain slices composed into
+one typed store interface, `IStore`, built with interface extension and utility
+types so that a selector reaching into any slice is checked at compile time.
+
+Redux-Saga handles the async sequences that genuinely need orchestration. There
+are 15+ domain flows covering auth, loans, cards, KYC, payments, and the
+WebSocket connection. These are the places where order matters, where a step can
+fail halfway through, and where a second user action arriving mid-flight has to
+cancel the first rather than race it.
+
+RTK Query sits alongside both on a shared `generatedEmptyApi` base instance,
+serving the read-heavy pages where what you want is caching and invalidation
+rather than orchestration.
+
+Three state tools in one application invites the obvious objection: pick one.
+The answer is that they are not doing the same job. RTK Query on an OTP flow
+gives you caching you do not want and none of the cancellation you do need. A
+saga wrapped around a list endpoint is ceremony. The boundary sits where the
+requirements actually change.
+
+Payment covers 3D Secure, saved card, new card, EFT and wire transfer, and the
 Kredim Wallet.
 
 ## Decisions
 
-- **Saga `takeLatest` for OTP and login** - each user action cancels in-flight
-  duplicates, which removed the ghost-login states the earlier implementation
-  produced
-- **Global reset on logout in the root reducer** - one dispatch returns all 20
-  domain slices to their initial state, instead of per-slice reset logic
-- **Dual-token Axios interceptor** - standard and partner authentication
-  contexts in a single HTTP client
-- **Amount bands, not amounts, in analytics** - GDPR/KVKK compliance enforced
-  at the architecture level rather than by review
+**`takeLatest` on login and OTP.** Multi-step authentication runs entirely
+through sagas, with `takeLatest` so each user action cancels any duplicate still
+in flight. The earlier implementation produced ghost login states: a member
+double-submitting an OTP, or a slow network letting two verification requests
+overlap, could leave the client authenticated against a response it should have
+discarded. Cancellation is not a nicety in an auth flow. It is the correctness
+property.
+
+**One dispatch resets everything on logout.** Logout is intercepted in the root
+reducer rather than handled slice by slice:
+
+```ts
+export const rootReducer = (state: IStore | undefined, action: AnyAction) =>
+  appReducer(
+    action.type === AuthActions.logout.type ? undefined : state,
+    action,
+  );
+```
+
+All 20 slices return to their initial state together. The per-slice alternative
+works right up until someone adds the twenty-first slice and forgets its reset
+case, at which point a shared device keeps the previous member's data in memory.
+Making that structurally impossible was cheaper than remembering to prevent it.
+
+**A dual-token HTTP client.** One Axios `HttpService` attaches a standard bearer
+token for direct members, and a partner token with `partnerId` injected for
+partner-authenticated ones. Two authentication contexts behind one client, so no
+feature has to know which tenant it is running under.
+
+**Amount bands, never amounts, in analytics.** KVKK and GDPR compliance is
+enforced by the shape of the tracking service rather than by review. The
+`InsiderEventsUsage` service accepts status codes and banded ranges, and offers
+no parameter that a raw figure could travel through:
+
+```ts
+InsiderEventsUsage.trackPaymentResult({
+  status: "success",
+  amountBand: toAmountBand(amount), // "5001-10000"
+});
+```
+
+Card data, personally identifying fields, and exact amounts never reach the SDK,
+because the signature does not accept them. A code review can miss a leaked
+amount. A type error cannot.
+
+**A WebSocket client that assumes the network is hostile.** Real-time
+notifications run over a `WebSocketClient` with quadratic backoff, jitter, and a
+ceiling:
+
+```ts
+const retryDelay = Math.min(
+  BASE_DELAY * attempt ** 2 + Math.random() * JITTER,
+  MAX_WEBSOCKET_RETRY_TIME,
+);
+```
+
+The jitter is the part that earns its place. Without it, every client dropped by
+the same server blip reconnects on the same schedule and comes back as a
+synchronised thundering herd. Listeners are held in a `Set` and torn down
+explicitly, so a component mounting and unmounting across a long session does
+not leak them.
+
+**Tracking as a queue, not a call.** The Insider CDP SDK requires `user`, then
+`init`, then `page`, in that order. Firing those from wherever a React tree
+happened to mount them dropped sessions. A `window.InsiderQueue` pattern
+sequences them correctly regardless of render order, and a
+`useInsiderPageTracking` hook fires page views from `useLocation`, so 10+ route
+components stopped carrying their own imperative tracking calls.
+
+**RTL for the Arabic market.** i18next with browser language detection, Ant
+Design locale switching, Day.js locale synchronisation, and RTL layout through a
+class toggle on `document.body`.
 
 ## Outcome
 
-To be written in feature 7, with the real figures.
+One codebase, three tenants, 100,000+ members. Concretely:
+
+- **Payment and credit logic exists once.** A fix to installment handling or 3D
+  Secure lands for Kredim, Hopi, and Partner at the same moment, which is the
+  entire reason the multi-tenant shape was worth its complexity.
+- **The state boundary held.** Sagas kept the business-critical flows
+  cancellable and ordered, RTK Query kept the read surfaces from becoming
+  hand-written cache code, and neither grew into the other's territory.
+- **Compliance is structural.** Amount banding and the logout reset are enforced
+  by a type signature and by the reducer, not by a reviewer noticing.
+- **Real-time stays quiet.** Backoff with jitter and explicit listener teardown
+  keep reconnection from turning into load spikes or leaks.
+
+There was substantial bundle work too: route-level `React.lazy` behind an
+`InitializeLazy` HOC, a Webpack 5 pipeline with vendor chunk splitting and
+contenthash-based caching, and CSS Modules with minified class names in
+production. It reduced the initial payload, but I do not have before and after
+numbers to quote, so I am describing the work rather than claiming a figure for
+it.

@@ -8,50 +8,158 @@ export const meta = {
   timeline: "2025 - 2026",
 };
 
-> Placeholder body. The facts below come from the CV and reference notes; the
-> full narrative, decisions, and measured outcomes land in feature 7.
+import BackstageMonorepo from "@/app/components/case-studies/diagrams/BackstageMonorepo";
 
 ## Problem
 
-The internal platform had to serve 29 distinct business domains - campaign,
-role, allocation, KYC settings, approval, and the rest - each owned by different
-people and moving at different speeds. Built as one undifferentiated admin app,
-every team's change would sit in every other team's way.
+Kredim Backstage is the console ParamTech's internal teams use to run the BNPL
+business: campaigns, credit allocation, KYC settings, approvals, roles and
+permissions, and roughly two dozen other domains. Twenty-nine of them, each
+owned by a different group of people, each moving at its own cadence.
+
+Built as one undifferentiated admin app, that shape has a predictable failure
+mode. Every team's change sits in every other team's way: shared component files
+nobody wants to touch, a routing table one person understands, and a permission
+model spread thin enough that answering "who can see this page?" means reading
+the whole codebase. For an internal tool in a regulated business, that last one
+is not a code quality problem. It is a compliance problem.
+
+The platform also had to be somewhere a new hire could land. With 29 domains and
+a small frontend team, onboarding cost is an architectural constraint, not a
+soft one.
 
 ## Architecture
 
 A feature-sliced monorepo on Bulletproof React principles: `apps/backstage`
-alongside `packages/auth` and `packages/blocks`, with pnpm workspaces holding
-it together. Each of the 29 features is a vertical slice owning its own API
-layer, queries and mutations, i18n bundle, and pages, with cross-feature imports
-disallowed.
+alongside `packages/auth` and `packages/blocks`, held together by pnpm
+workspaces. React 19 and TypeScript in strict mode, Vite for the build, React
+Router v7 in data mode.
+
+<BackstageMonorepo />
+
+Each of the 29 features is a vertical slice owning its API layer, its queries
+and mutations, its i18n bundle, and its pages. Cross-feature imports are
+disallowed: a slice reaches sideways through the shared packages or not at all.
+That rule is what makes the ownership real. Without it, feature folders decay
+into a directory layout with the same coupling underneath.
+
+Server state runs through TanStack Query v5 with
+`@lukemorales/query-key-factory`. Query keys and their fetchers live together in
+one factory per feature, so cache invalidation after a mutation is declarative
+rather than remembered:
 
 ```ts
-// query keys and their fetchers live in one factory, per feature
 export const campaignKeys = createQueryKeys("campaign", {
   list: (filters: CampaignFilters) => ({
     queryKey: [filters],
     queryFn: () => api.listCampaigns(filters),
   }),
+  detail: (id: string) => ({
+    queryKey: [id],
+    queryFn: () => api.getCampaign(id),
+  }),
 });
+
+// a write invalidates by key, not by hand-tracked convention
+queryClient.invalidateQueries({ queryKey: campaignKeys.list._def });
 ```
 
-Server state runs through TanStack Query v5 with `query-key-factory`, so cache
-invalidation after a mutation is declarative rather than remembered.
+The alternative, string keys assembled at each call site, works until about the
+twelfth feature and then quietly serves stale data after a write.
+
+Underneath sits a single shared `axiosInstance` handling token injection, error
+interception, and response transformation, so no feature invents its own HTTP
+conventions. Table-heavy pages share one more piece of orchestration: a
+`QueryContextProvider` and `QueryTable` pairing that puts filtering, pagination,
+and export behind one contract instead of 29 hand-rolled variations.
+
+Types come from the backend rather than from a hand-written guess. A
+`fetch-swagger` script parses the local Swagger schemas and maps them onto Zod
+schemas and TypeScript types, so an endpoint that changes shape surfaces as a
+type error at build time instead of a surprise in production.
 
 ## Decisions
 
-- **Permissions at the route, not in the view** - a `RouteGuard` backed by
-  central `PERMISSION` and `ROUTE_PERMISSIONS` maps makes all 40+ protected
-  routes auditable from one file
-- **A `MutationForm` compound component** - `Root`, `Form`, `FieldContainer`,
-  `Actions`, `SubmitButton`, sharing `isPending` through context instead of
-  prop drilling, applied across 20+ form pages
-- **No barrel files** - they defeated Vite's tree-shaking and slowed HMR, so
-  imports point at real modules
-- **Route-level code splitting** - `React.lazy` with a `loadRoute` wrapper,
-  loading each feature's i18n bundle with it
+**Permissions at the route, not in the view.** A `RouteGuard` component backed
+by central `PERMISSION` and `ROUTE_PERMISSIONS` maps. All 40+ protected routes
+declare what they need in one file:
+
+```ts
+export const ROUTE_PERMISSIONS = {
+  "/campaign/create": PERMISSION.CAMPAIGN_WRITE,
+  "/allocation": PERMISSION.ALLOCATION_READ,
+  "/kyc-settings": PERMISSION.KYC_MANAGE,
+} as const;
+```
+
+Scattering permission checks through components would have worked, and it is how
+these things usually start. It fails an audit. The question an internal fintech
+tool has to answer is "who can reach this page", and a single map answers it by
+being read. Conditional rendering spread across 29 slices answers it by being
+trusted.
+
+**A `MutationForm` compound component.** `Root`, `Form`, `FieldContainer`,
+`Actions`, and `SubmitButton`, passing `isPending` through context instead of
+prop drilling, applied across 20+ create and update pages. Every form page in
+the platform has the same skeleton, so a new one is a filled-in template rather
+than a layout decision made again.
+
+**The hardest form problem was consistency, not layout.** Campaign creation is a
+seven-step flow built on React Hook Form and Zod, with an isolated schema per
+step so a later step's empty fields cannot invalidate an earlier one. Inside it,
+installment configuration is a dynamic `useFieldArray` table, and the same
+installment count could be picked on two rows, which the backend then rejected.
+A `useCollectiveInstallmentOptions` hook watches the whole array, derives the set
+of values already taken, and hands it to each select as disabled options:
+
+```ts
+const rows = useWatch({ control, name: "campaignInterest" });
+
+const taken = useMemo(
+  () => new Set(rows.map((row) => row.installmentCount)),
+  [rows],
+);
+```
+
+The inconsistent state became unreachable in the interface, rather than
+something a server round trip had to catch and explain.
+
+**No barrel files.** `index.ts` re-export barrels defeated Vite's tree-shaking
+and dragged on HMR, so imports point at real modules. It costs a longer import
+path and buys a dev loop that stays quick at 29 features.
+
+**Route-level code splitting, with i18n along for the ride.** `React.lazy`
+behind a `loadRoute` wrapper, and each feature registers its own translation
+bundle through `addResourceBundle` from its own `main.tsx` entry point. A route
+pulls its code and its language pack together, and namespaces stay isolated per
+feature instead of collecting in one global bundle.
+
+**One race condition worth naming.** On first load with no `authToken`, several
+components could each call `refreshAuthToken()` at once. `SessionProvider` guards
+it with `useLayoutEffect` and a `useRef` flag so the refresh fires once. A small
+fix, but the failure mode was ugly: concurrent refreshes racing to invalidate
+each other's token.
 
 ## Outcome
 
-To be written in feature 7, with the real figures.
+The shape held at 29 slices. Ownership sits in one directory per team, 40+
+protected routes are governed from one map, 20+ form pages share one form
+contract, and cache invalidation is declared next to the query it invalidates.
+
+What that bought, concretely:
+
+- **Ownership is legible.** A team's work is one directory, and the
+  no-cross-import rule keeps a change's blast radius knowable by looking at the
+  slice.
+- **Permissions are auditable.** "Who can reach this route" is answered by
+  reading one file, which matters when a regulator is eventually behind the
+  question.
+- **The build stays fast as it grows.** Direct imports and route-level splitting
+  keep both HMR and the production build from degrading as slices are added.
+- **New features start from a template.** A new slice is a known folder shape, a
+  known form component, and a known query factory, which is most of what
+  onboarding cost actually is.
+
+I have deliberately not quoted percentage improvements for onboarding time or
+form delivery speed. The figures I have for those are estimates rather than
+measurements, and a number I cannot source is worth less than none.

@@ -3,39 +3,98 @@ export const meta = {
   slug: "kredim-checkout",
   summary:
     "An embeddable credit-payment flow that lets people pay with Kredim credit without leaving a partner's e-commerce or banking app.",
-  techStack: ["react 18", "redux-saga", "embedded flow"],
+  techStack: ["react 18", "redux-saga", "webview"],
   role: "Senior Frontend Developer",
   timeline: "2023 - 2026",
 };
 
-> Placeholder body. The facts below come from the CV and reference notes; the
-> full narrative, decisions, and measured outcomes land in feature 7.
+import CheckoutEmbed from "@/app/components/case-studies/diagrams/CheckoutEmbed";
 
 ## Problem
 
-Paying with Kredim credit meant leaving whatever app you were already in. A
-customer partway through checkout on a partner's e-commerce site, or inside a
-banking app, had to break context to complete a payment, and every context
-break is somewhere a transaction can be abandoned.
+Paying with Kredim credit meant leaving the app you were already in. Someone
+partway through checkout in a partner's shopping app, or inside their banking
+app, had to break context to finish the payment. Every context break is a place
+a transaction can be abandoned, and for a BNPL product the payment step is the
+business.
+
+Underneath that sits the constraint that shapes everything else: this flow does
+not own its environment. It renders inside a webview belonging to someone else's
+native application, on a device we do not control, in a session the host app can
+suspend at any moment.
 
 ## Architecture
 
-An embeddable checkout flow that runs inside third-party e-commerce and banking
-partner applications, rather than a destination the customer is sent to. The
-flow carries campaign and installment selection with it, so the choices that
-used to require a separate step happen in place.
+Kredim Checkout is a React 18 flow running inside a webview embedded in the
+partner's native iOS or Android app. It shares the Member Panel's platform,
+Redux Toolkit slices with Redux-Saga for the async sequences, so the credit,
+campaign, and payment logic already proven there did not have to be rebuilt for
+an embedded context.
 
-It runs on the same platform as the Member Panel - React 18 with Redux Toolkit
-slices and Redux-Saga for the async sequences - so the payment and credit logic
-already proven there did not have to be rebuilt for an embedded context.
+<CheckoutEmbed />
+
+A transaction starts on the server, not in the client. The partner's backend
+calls Kredim to create it, receives a short-lived session token, and the webview
+opens the flow with that token. Amount, order, and merchant are fixed
+server-side before the customer sees anything, so nothing the embedded client
+could be made to say changes what is actually charged. The client's job is to
+carry someone through a decision, not to assert the terms of it.
+
+Campaign and installment selection happens inside the flow, at the moment of
+payment, rather than as a separate step somewhere else in the journey.
 
 ## Decisions
 
-Interrupted transactions get an SMS-triggered deep link back into the flow,
-rather than being dropped. An embedded surface has more ways to be interrupted
-than a page you own end to end - the host app backgrounds, a call comes in -
-so recovery had to be a designed path, not an error state.
+**Assume the host can take the screen away.** This is the decision the rest hang
+off. A webview inside someone else's app is not a page you control: the host can
+background, a call can arrive, the operating system can reclaim memory, and the
+webview can be gone mid-transaction. Nothing that matters can live only in
+client memory.
+
+So the state that matters lives server-side against the transaction, and the
+client treats itself as a resumable view of that record rather than the owner of
+it. Sagas drive the step sequence, the store holds what the current screen
+needs, and the transaction itself stays authoritative and remote.
+
+**Recovery from an order reference, not a saved session.** When a transaction is
+interrupted, the customer gets an SMS carrying a deep link that holds the order
+reference. Opening it rebuilds the flow from that reference rather than
+restoring a serialised client session.
+
+The distinction earns its keep. A stored session is a snapshot: it can go stale,
+it can be invalid by the time it is opened, and it has to be versioned every
+time the flow changes shape. An order reference is a pointer to the thing that
+was always the source of truth. Rebuilding from it means a recovered transaction
+and a fresh one converge on the same code path, so there is no separate restored
+mode to keep correct alongside the normal one.
+
+**Design for a browser you did not choose.** The flow renders in whatever
+webview the partner's app provides, across iOS and Android, across app versions
+we do not ship. That rules out anything that leans on one engine's particular
+behaviour, and it makes the viewport and the on-screen keyboard genuinely hard:
+the visible area changes underneath you, and the layout has to stay usable when
+a keyboard takes half a screen whose real dimensions you cannot reliably query.
+
+The practical consequence is conservatism. Fewer assumptions about scroll
+behaviour, no reliance on host-provided chrome, and layouts that hold when the
+viewport changes shape without warning.
+
+**One contract for both kinds of partner.** The partner set spans e-commerce and
+banking applications, and both open the flow the same way, through the same
+server-created session token. The integration surface a partner has to implement
+is the same regardless of which kind of app they are.
 
 ## Outcome
 
-To be written in feature 7, with the real figures.
+- **The payment happens where the customer already is.** No handoff to a
+  browser, no separate app, no return trip. The context break that used to sit
+  at the most abandonable point in the flow is gone.
+- **The client cannot misstate the terms.** Amount, order, and merchant are
+  fixed server-side before the flow opens, so reaching into the embedded client
+  changes nothing that determines the charge.
+- **Interruption is recoverable by design.** An SMS carrying an order reference
+  returns someone to the same code path they left, not to a special recovery
+  mode that has to be maintained separately.
+- **The platform was reused, not rebuilt.** Sharing the Member Panel's state
+  architecture meant the credit and payment logic arrived with a production
+  track record rather than as a rewrite.
