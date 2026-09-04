@@ -16,6 +16,22 @@
   --accent-ink: #ffffff;
   --accent-subtle: #fef3c7;
   --danger: #b91c1c;
+
+  /* Dark needs the two blocks below, because CSS can't combine a media
+     condition with an attribute selector in one rule. Holding the values here
+     is what stops an edit from landing in one branch and not the other. */
+  --dark-bg: #0a0a0a;
+  --dark-surface: #111111;
+  --dark-border: #262626;
+
+  --dark-text: #ededed;
+  --dark-muted: #a3a3a3;
+  --dark-faint: #8a8a8a;
+
+  --dark-accent: #f59e0b;
+  --dark-accent-ink: #0a0a0a;
+  --dark-accent-subtle: #451a03;
+  --dark-danger: #f87171;
 }
 
 @theme inline {
@@ -35,34 +51,34 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0a0a0a;
-    --surface: #111111;
-    --border: #262626;
+    --bg: var(--dark-bg);
+    --surface: var(--dark-surface);
+    --border: var(--dark-border);
 
-    --text: #ededed;
-    --muted: #a3a3a3;
-    --faint: #8a8a8a;
+    --text: var(--dark-text);
+    --muted: var(--dark-muted);
+    --faint: var(--dark-faint);
 
-    --accent: #f59e0b;
-    --accent-ink: #0a0a0a;
-    --accent-subtle: #451a03;
-    --danger: #f87171;
+    --accent: var(--dark-accent);
+    --accent-ink: var(--dark-accent-ink);
+    --accent-subtle: var(--dark-accent-subtle);
+    --danger: var(--dark-danger);
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #0a0a0a;
-  --surface: #111111;
-  --border: #262626;
+  --bg: var(--dark-bg);
+  --surface: var(--dark-surface);
+  --border: var(--dark-border);
 
-  --text: #ededed;
-  --muted: #a3a3a3;
-  --faint: #8a8a8a;
+  --text: var(--dark-text);
+  --muted: var(--dark-muted);
+  --faint: var(--dark-faint);
 
-  --accent: #f59e0b;
-  --accent-ink: #0a0a0a;
-  --accent-subtle: #451a03;
-  --danger: #f87171;
+  --accent: var(--dark-accent);
+  --accent-ink: var(--dark-accent-ink);
+  --accent-subtle: var(--dark-accent-subtle);
+  --danger: var(--dark-danger);
 }
 
 body {
