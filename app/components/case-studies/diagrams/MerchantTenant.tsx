@@ -45,7 +45,7 @@ export default function MerchantTenant() {
         </div>
         <p className="mt-3 text-xs leading-relaxed text-muted">
           A head office sees across its branches. A store sees its own trade and
-          no one else's.
+          no one else&apos;s.
         </p>
       </div>
 
