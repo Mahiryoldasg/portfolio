@@ -1,36 +1,98 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Portfolio
 
-## Getting Started
+Personal portfolio site for Mahir Yoldaş Gazeloğlu, Senior Frontend Engineer.
+It presents production case studies from five years building fintech and BNPL
+frontends, alongside an about page and a downloadable CV.
 
-First, run the development server:
+Case studies are MDX files in `content/case-studies/`, rendered as static pages
+at build time.
+
+## Stack
+
+Next.js 16 (App Router) with React 19, TypeScript in strict mode, Tailwind CSS
+v4 (CSS-first config, no `tailwind.config.js`), MDX for content, Resend for the
+contact form, and Vitest for unit tests.
+
+## Getting started
 
 ```bash
+git clone https://github.com/Mahiryoldasg/portfolio.git
+cd portfolio
+npm install
+cp .env.example .env.local   # then fill in the values you need
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The site runs at http://localhost:3000. Every page except the contact form
+works without any environment variables set.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Commands
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command | What it does |
+|---|---|
+| `npm run dev` | Dev server on http://localhost:3000 |
+| `npm run build` | Production build |
+| `npm run start` | Serve the production build |
+| `npm run lint` | ESLint |
+| `npm run test` | Unit tests (Vitest) |
+| `npm run test:watch` | Unit tests in watch mode |
 
-## Learn More
+Tests cover logic only: validators, formatters, and similar. Pages and
+components are verified with the build and a browser, not unit tests.
 
-To learn more about Next.js, take a look at the following resources:
+## Environment variables
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Variable | Needed for | Notes |
+|---|---|---|
+| `SITE_URL` | Absolute URLs in metadata, `sitemap.xml`, `robots.txt` | Optional. Read at build time. Falls back to Render's own URL, then to localhost |
+| `RESEND_API_KEY` | Sending contact form email | Runtime only. Server-side secret, never prefix with `NEXT_PUBLIC_` |
+| `CONTACT_EMAIL_TO` | Where contact form email is delivered | Runtime only. See the Resend note below |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+`SITE_URL` is read during `npm run build`, not at runtime, because the metadata,
+sitemap and robots routes are all evaluated while building. Setting it only in a
+runtime environment ships localhost URLs.
 
-## Deploy on Vercel
+The two Resend variables are read only when the contact form is submitted, so
+the build succeeds without them.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deploying to Render
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The repo carries its own deployment config in `render.yaml`, so Render builds
+the service from the file instead of settings typed into a form. You use the
+dashboard once, to connect the repo.
+
+1. Push `main` to GitHub. Render reads `render.yaml` from the connected branch,
+   so the file has to be on GitHub, not just on your machine.
+2. In Render, choose **New > Blueprint** and select the repository. Render finds
+   `render.yaml` and shows the service it is about to create.
+3. Render prompts for the two secrets marked `sync: false` in the blueprint:
+   `RESEND_API_KEY` and `CONTACT_EMAIL_TO`. Everything else (build and start
+   commands, port, region, health check) comes from the file.
+4. Apply. Render builds and deploys.
+
+After the first deploy you do not need the dashboard again. `autoDeployTrigger`
+is set to `commit`, so every push to `main` deploys automatically.
+
+### Notes
+
+**You do not need to set `SITE_URL` for the first deploy.** The service URL does
+not exist until the service does, so `lib/site.ts` falls back to Render's own
+`RENDER_EXTERNAL_URL`, which Render provides at build time. The first build
+already produces correct absolute URLs. Set `SITE_URL` explicitly only when a
+custom domain is attached; it outranks Render's URL.
+
+**`CONTACT_EMAIL_TO` has to be the address that owns the Resend account.** Until
+a sending domain is verified, Resend sends from `onboarding@resend.dev`, and
+that sender can only deliver to the account owner. Pointing it elsewhere fails
+silently: the form reports success and no mail arrives.
+
+**The free plan sleeps.** A free Render web service spins down after a period of
+inactivity and cold starts on the next request, which can take close to a
+minute. Move to a paid instance type in `render.yaml` if that first impression
+matters.
+
+**Scaling past one instance needs one more variable.** The contact form is a
+Server Action, and Next encrypts its closure with a key generated per build. Run
+more than one instance without a shared
+`NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` and submissions fail with "Failed to find
+Server Action". This does not apply to a single instance.

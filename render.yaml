@@ -1,0 +1,33 @@
+services:
+  - name: portfolio
+    type: web
+    runtime: node
+    plan: free
+    # Closest region to the author and to the roles this site is aimed at.
+    region: frankfurt
+    # `npm ci` over `npm install`: package-lock.json is committed, and the build
+    # should resolve to exactly what was tested. Render sets NODE_ENV=production
+    # at runtime only, so devDependencies still install here.
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    # Fully prerendered, so the health check costs nothing to serve.
+    healthCheckPath: /
+    autoDeployTrigger: commit
+    envVars:
+      # `next start` reads PORT and binds 0.0.0.0. Declared rather than assumed,
+      # because Render treats 10000 as the port a web service should listen on
+      # and does not guarantee injecting PORT itself.
+      - key: PORT
+        value: "10000"
+      # Prompted for at Blueprint creation. Never stored in the repo.
+      # CONTACT_EMAIL_TO must be the address owning the Resend account until a
+      # domain is verified: the onboarding@resend.dev sender delivers nowhere else.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: CONTACT_EMAIL_TO
+        sync: false
+      # SITE_URL is deliberately absent. lib/site.ts falls back to Render's own
+      # RENDER_EXTERNAL_URL, which is set at build time, so the first deploy has
+      # correct absolute URLs with nothing to fill in. Declaring it here as
+      # `sync: false` would invite a blank value that outranks nothing but still
+      # has to be handled. Add it only when a custom domain exists.
