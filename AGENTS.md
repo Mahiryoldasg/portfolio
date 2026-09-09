@@ -28,9 +28,12 @@ A personal portfolio site.
 - Build: `npm run build`
 - Production server: `npm run start`
 - Lint: `npm run lint`
+- Test: `npm run test` (watch: `npm run test:watch`)
 
-Testing is opt-in. This project does not currently have a unit test runner, so
-no test command is required before committing.
+Unit tests run on Vitest. The gate applies to logic (parsers, formatters,
+validators, server actions), not to UI components or render routes, which are
+verified with the build and a screenshot instead. A step that adds logic ships a
+passing test in the same diff.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
