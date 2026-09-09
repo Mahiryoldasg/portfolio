@@ -1,5 +1,19 @@
+import type { Metadata } from "next";
 import { caseStudies } from "@/lib/case-studies";
 import CaseStudyListItem from "../components/case-studies/CaseStudyListItem";
+
+const PAGE_TITLE = "Case Studies";
+const PAGE_DESCRIPTION =
+  "Four case studies from the Kredim BNPL platform: an embeddable checkout, a member panel, a merchant panel, and a 29-module internal admin platform.";
+
+// No `openGraph` block on purpose. Next derives og:title and og:description
+// from the fields below, and any openGraph object here would replace the root
+// layout's wholesale, taking the inherited opengraph-image with it.
+export const metadata: Metadata = {
+  title: PAGE_TITLE,
+  description: PAGE_DESCRIPTION,
+  alternates: { canonical: "/case-studies" },
+};
 
 export default function CaseStudiesPage() {
   return (

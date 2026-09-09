@@ -1,6 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import CvDownloadLink from "./components/cv/CvDownloadLink";
 import ContactForm from "./components/contact/ContactForm";
+
+// Title, description and OpenGraph all come from the root layout: the site
+// description is the home page description. Only the canonical is page-specific.
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 export default function Home() {
   return (

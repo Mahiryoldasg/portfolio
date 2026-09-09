@@ -1,8 +1,22 @@
+import type { Metadata } from "next";
 import { bio, education, experience, skillGroups } from "@/lib/about";
 import SkillGroupCard from "../components/about/SkillGroupCard";
 import ExperienceTimeline from "../components/about/ExperienceTimeline";
 import Education from "../components/about/Education";
 import CvDownloadLink from "../components/cv/CvDownloadLink";
+
+const PAGE_TITLE = "About";
+const PAGE_DESCRIPTION =
+  "Five years of production frontend work in fintech, all of it on the Kredim BNPL platform at ParamTech. Skills, experience timeline, and a downloadable CV.";
+
+// No `openGraph` block on purpose. Next derives og:title and og:description
+// from the fields below, and any openGraph object here would replace the root
+// layout's wholesale, taking the inherited opengraph-image with it.
+export const metadata: Metadata = {
+  title: PAGE_TITLE,
+  description: PAGE_DESCRIPTION,
+  alternates: { canonical: "/about" },
+};
 
 export default function AboutPage() {
   return (

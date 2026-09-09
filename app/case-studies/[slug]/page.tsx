@@ -19,9 +19,14 @@ export async function generateMetadata({
 
   if (!caseStudy) return {};
 
+  // Title segment only. The root layout's template appends the site name, so
+  // spelling it out here would print it twice. No `openGraph` block for the
+  // same reason as the other pages: it would replace the parent's and drop
+  // this segment's own opengraph-image.
   return {
-    title: `${caseStudy.title} - Mahir Yoldaş Gazeloğlu`,
+    title: caseStudy.title,
     description: caseStudy.summary,
+    alternates: { canonical: `/case-studies/${slug}` },
   };
 }
 

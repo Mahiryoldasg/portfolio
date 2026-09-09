@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import Nav from "./components/layout/Nav";
 import Footer from "./components/layout/Footer";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const themeInitScript = `
@@ -23,9 +24,29 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Mahir Yoldaş Gazeloğlu - Senior Frontend Engineer",
-  description:
-    "Portfolio and case studies from five years building production frontends in fintech.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_TITLE,
+    template: `%s - ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  authors: [{ name: SITE_NAME }],
+  // Only the fields that are genuinely the same on every page. Next derives
+  // og:title and og:description from each page's own title and description, and
+  // a `url` here would be inherited as the root URL by every child. Pages must
+  // not define their own `openGraph`: metadata merges shallowly, so doing so
+  // would drop the opengraph-image Next attaches to this segment.
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    locale: "en_US",
+  },
+  // Card type only. A `twitter.title` here would be inherited by every child
+  // page (metadata merges shallowly) and would then outrank their own og:title,
+  // so the per-page titles are left to the OpenGraph tags X falls back to.
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
