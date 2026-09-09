@@ -1,5 +1,8 @@
 services:
-  - name: portfolio
+  # The onrender.com subdomain is derived from this, and it is the link that
+  # travels on a CV, so it carries the author's name rather than a generic word
+  # Render would have to disambiguate with a random suffix.
+  - name: mahirgazeloglu
     type: web
     runtime: node
     plan: free
