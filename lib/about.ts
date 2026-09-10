@@ -43,7 +43,7 @@ export const skillGroups: SkillGroup[] = [
     name: "Build & Tooling",
     skills: [
       "Vite",
-      "Next.js (in progress)",
+      "Next.js (App Router, SSG)",
       "Webpack 5",
       "Babel",
       "pnpm Workspaces",
