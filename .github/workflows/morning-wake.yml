@@ -1,0 +1,53 @@
+name: Morning wake
+
+# Wakes the free Render instance each morning, shortly before the cron-job.org
+# keep-alive window opens at 08:03 local. The two tools cover each other:
+# cron-job.org runs reliably every 10 minutes but cannot wake a sleeping
+# service, because it gives up on the loading page Render serves during
+# spin-up and the request never reaches the app. A GitHub runner holds the
+# connection open instead, which does wake it, evidenced by earlier runs of a
+# deleted every-10-minutes workflow taking 28 and 40 seconds against the 0.2
+# seconds a warm request costs.
+#
+# GitHub does not guarantee scheduled runs and drops them under load, which is
+# why the every-10-minutes version was abandoned. Here that weakness matters
+# far less: only one of the three attempts has to land, and a late one still
+# works, because cron-job.org takes over from whenever the service comes up.
+#
+# The attempts sit close together on purpose. Spin-down is 15 minutes, so a
+# wake much earlier than 08:03 would let the service fall asleep again before
+# the first keep-alive ping arrives, which is the failure this exists to
+# prevent. Waking at 07:50 leaves the service idle for 13 minutes at most.
+#
+# Cron is UTC and cron-job.org runs on Europe/Istanbul, so 04:50, 04:55 and
+# 05:00 UTC are 07:50, 07:55 and 08:00 local. Days 1-6 are Monday to Saturday,
+# matching the keep-alive schedule, which does not run on Sunday.
+#
+# GitHub disables scheduled workflows in public repositories after 60 days
+# with no repository activity. If the morning wake stops, re-enable it from
+# the Actions tab.
+
+on:
+  schedule:
+    - cron: "50 4 * * 1-6"
+    - cron: "55 4 * * 1-6"
+    - cron: "0 5 * * 1-6"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wake:
+    runs-on: ubuntu-latest
+    steps:
+      # No size limit and a long timeout, which is the whole point: the request
+      # has to stay connected through a spin-up measured between 22 and 90
+      # seconds. A run reporting a long time_total woke a sleeping service; a
+      # fast one found it already awake, and both are fine.
+      - name: Wake the site
+        run: |
+          curl -fsS --max-time 150 --retry 2 --retry-delay 15 \
+            -o /dev/null \
+            -w "HTTP %{http_code} in %{time_total}s\n" \
+            https://mahirgazeloglu.onrender.com/
