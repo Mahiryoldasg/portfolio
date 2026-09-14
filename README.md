@@ -86,13 +86,61 @@ a sending domain is verified, Resend sends from `onboarding@resend.dev`, and
 that sender can only deliver to the account owner. Pointing it elsewhere fails
 silently: the form reports success and no mail arrives.
 
-**The free plan sleeps.** A free Render web service spins down after a period of
-inactivity and cold starts on the next request, which can take close to a
-minute. Move to a paid instance type in `render.yaml` if that first impression
-matters.
+**The free plan sleeps.** A free Render web service spins down after 15 minutes
+of inactivity, and the next request pays a cold start of 20 to 90 seconds. See
+[Keeping the free instance awake](#keeping-the-free-instance-awake) for how that
+is worked around without paying for an always-on instance.
 
 **Scaling past one instance needs one more variable.** The contact form is a
 Server Action, and Next encrypts its closure with a key generated per build. Run
 more than one instance without a shared
 `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` and submissions fail with "Failed to find
 Server Action". This does not apply to a single instance.
+
+## Keeping the free instance awake
+
+A free Render service spins down after 15 minutes of inactivity, so someone
+opening the link cold waits on Render's loading page instead of seeing the site.
+Two scheduled jobs keep it up through the hours the link is likely to be opened.
+Neither lives in this repo, so both are written down here.
+
+**Keep-alive.** A cron-job.org job requests
+`https://mahirgazeloglu.onrender.com/` on `3,13,23,33,43,53 8-20 * * 1-6`
+(Europe/Istanbul): every 10 minutes from 08:03 to 20:53, Monday to Saturday. Ten
+minutes sits inside the 15-minute spin-down window with room for a missed run.
+
+**Morning wake.** A second cron-job.org job, at `50 7 * * 1-6`, POSTs to this
+repository to start the `Morning wake` workflow, whose runner requests the site.
+It fires 13 minutes before the keep-alive window opens, close enough that the
+service cannot fall asleep again in between.
+
+### Why the morning wake goes through GitHub
+
+cron-job.org keeps a warm service warm but cannot wake a sleeping one. It gives
+up while Render is still serving its spin-up page, and Render's logs show the
+request never reaching the app, so the service stays down. A GitHub runner holds
+the connection through the full cold start and does wake it. GitHub's own
+scheduler, though, delivered the morning runs about five hours late, which for
+this job is the same as not running. So the reliable scheduler triggers the
+capable runner, and neither is asked to do the half it is bad at.
+
+### The dispatch request
+
+| Field | Value |
+|---|---|
+| Method | `POST` |
+| URL | `https://api.github.com/repos/Mahiryoldasg/portfolio/actions/workflows/morning-wake.yml/dispatches` |
+| Body | `{"ref":"main"}` |
+| `Authorization` | `Bearer <token>` |
+| `Accept` | `application/vnd.github+json` |
+| `Content-Type` | `application/json` |
+| `X-GitHub-Api-Version` | `2022-11-28` |
+
+GitHub answers `204 No Content`. That matters here: cron-job.org aborts any
+response over 64 KB, which is what ruled out pointing it at a page on the site.
+
+The token is a fine-grained personal access token scoped to this repository
+alone, with **Actions: Read and write** and nothing else. It expires. When it
+does, the morning wake fails quietly and the first visit of the day is slow
+again, so the fix is to regenerate it and paste the new value into the
+cron-job.org job.

@@ -9,29 +9,28 @@ name: Morning wake
 # deleted every-10-minutes workflow taking 28 and 40 seconds against the 0.2
 # seconds a warm request costs.
 #
-# GitHub does not guarantee scheduled runs and drops them under load, which is
-# why the every-10-minutes version was abandoned. Here that weakness matters
-# far less: only one of the three attempts has to land, and a late one still
-# works, because cron-job.org takes over from whenever the service comes up.
+# There is no `schedule:` trigger, deliberately. GitHub did run all three
+# morning attempts it was given, but delivered them between 13:08 and 13:15
+# local against slots of 07:50, 07:55 and 08:00, roughly five and a quarter
+# hours late. For a job whose only value is punctuality that is worse than not
+# running at all: it still spends free minutes and still reports success. The
+# trigger now comes from cron-job.org, which POSTs to this workflow's dispatch
+# endpoint at 07:50 local and keeps time to within seconds.
 #
-# The attempts sit close together on purpose. Spin-down is 15 minutes, so a
-# wake much earlier than 08:03 would let the service fall asleep again before
-# the first keep-alive ping arrives, which is the failure this exists to
-# prevent. Waking at 07:50 leaves the service idle for 13 minutes at most.
+# Dropping the schedule also removes the only way this workflow could be
+# switched off behind our backs: GitHub auto-disables *scheduled* workflows in
+# public repositories after 60 days without repository activity, and that would
+# have taken the dispatch trigger down with it.
 #
-# Cron is UTC and cron-job.org runs on Europe/Istanbul, so 04:50, 04:55 and
-# 05:00 UTC are 07:50, 07:55 and 08:00 local. Days 1-6 are Monday to Saturday,
-# matching the keep-alive schedule, which does not run on Sunday.
+# 07:50 is close to 08:03 on purpose. Spin-down is 15 minutes, so waking much
+# earlier would let the service fall asleep again before the first keep-alive
+# ping arrives, which is the failure this exists to prevent. It leaves the
+# service idle for 13 minutes at most.
 #
-# GitHub disables scheduled workflows in public repositories after 60 days
-# with no repository activity. If the morning wake stops, re-enable it from
-# the Actions tab.
+# The POST that starts this is documented in README.md under "Keeping the free
+# instance awake", including the token it needs.
 
 on:
-  schedule:
-    - cron: "50 4 * * 1-6"
-    - cron: "55 4 * * 1-6"
-    - cron: "0 5 * * 1-6"
   workflow_dispatch:
 
 permissions:
